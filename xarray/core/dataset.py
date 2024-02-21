@@ -1097,6 +1097,7 @@ class Dataset(
         dataset. It is up to the caller to ensure that they have the right type
         and are not used elsewhere.
         """
+        start = time.time()
         if inplace:
             if variables is not None:
                 self._variables = variables
@@ -1127,6 +1128,7 @@ class Dataset(
             obj = self._construct_direct(
                 variables, coord_names, dims, attrs, indexes, encoding
             )
+        print(f'_replace: {time.time() - start}')
         return obj
 
     def _replace_with_new_dims(
@@ -1176,6 +1178,7 @@ class Dataset(
         results.
 
         """
+        start = time.time()
         if not indexes:
             return self
 
@@ -1226,6 +1229,7 @@ class Dataset(
             variables=new_variables, coord_names=new_coord_names, indexes=new_indexes
         )
 
+        print(f'_overwrite_indexes: {time.time() - start}')
         if rename_dims:
             # skip rename indexes: they should already have the right name(s)
             dims = replaced._rename_dims(rename_dims)
