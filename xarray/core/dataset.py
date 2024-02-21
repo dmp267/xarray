@@ -24,6 +24,7 @@ from os import PathLike
 from typing import IO, TYPE_CHECKING, Any, Callable, Generic, Literal, cast, overload
 
 import numpy as np
+import time
 
 # remove once numpy 2.0 is the oldest supported version
 try:
@@ -2933,8 +2934,10 @@ class Dataset(
             Tutorial material on basics of indexing
 
         """
+        start = time.time()
         indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "isel")
         if any(is_fancy_indexer(idx) for idx in indexers.values()):
+            print('fancy')
             return self._isel_fancy(indexers, drop=drop, missing_dims=missing_dims)
 
         # Much faster algorithm for when all indexers are ints, slices, one-dimensional
@@ -2946,7 +2949,7 @@ class Dataset(
         coord_names = self._coord_names.copy()
 
         indexes, index_variables = isel_indexes(self.xindexes, indexers)
-
+        
         for name, var in self._variables.items():
             # preserve variable order
             if name in index_variables:
@@ -2960,7 +2963,7 @@ class Dataset(
                         continue
             variables[name] = var
             dims.update(zip(var.dims, var.shape))
-
+        print(f'isel pre construct_direct: {time.time() - start}')
         return self._construct_direct(
             variables=variables,
             coord_names=coord_names,
@@ -2978,6 +2981,7 @@ class Dataset(
         drop: bool,
         missing_dims: ErrorOptionsWithWarn = "raise",
     ) -> Self:
+        start = time.time()
         valid_indexers = dict(self._validate_indexers(indexers, missing_dims))
 
         variables: dict[Hashable, Variable] = {}
@@ -3010,6 +3014,7 @@ class Dataset(
         variables.update(coord_vars)
         indexes.update(new_indexes)
         coord_names = self._coord_names & variables.keys() | coord_vars.keys()
+        print(f'isel_fancy pre replace_with_new_dims: {time.time() - start}')
         return self._replace_with_new_dims(variables, coord_names, indexes=indexes)
 
     def sel(
@@ -3087,10 +3092,13 @@ class Dataset(
             Tutorial material on basics of indexing
 
         """
+        start = time.time()
         indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "sel")
         query_results = map_index_queries(
             self, indexers=indexers, method=method, tolerance=tolerance
         )
+        print(f'query_results: {time.time() - start}')
+        checkpoint = time.time()
 
         if drop:
             no_scalar_variables = {}
@@ -3103,6 +3111,7 @@ class Dataset(
             query_results.variables = no_scalar_variables
 
         result = self.isel(indexers=query_results.dim_indexers, drop=drop)
+        print(f'isel: {time.time() - checkpoint}')
         return result._overwrite_indexes(*query_results.as_tuple()[1:])
 
     def head(
